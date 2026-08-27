@@ -58,7 +58,9 @@ class ProfileResponse(BaseModel):
     experience: list[Experience] = Field(default_factory=list)
     education: list[Education] = Field(default_factory=list)
     skills: list[str] = Field(default_factory=list)
-    certifications: list[Certification] = Field(default_factory=list)
+    certifications: list[Certification] = Field(
+        default_factory=list
+    )
     languages: list[Language] = Field(default_factory=list)
 
     metadata: ProfileMetadata

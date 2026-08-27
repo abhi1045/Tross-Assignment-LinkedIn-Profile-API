@@ -1,4 +1,8 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import (
+    APIRouter,
+    HTTPException,
+    status,
+)
 
 from app.schemas.profile import (
     ProfileRequest,
@@ -7,6 +11,7 @@ from app.schemas.profile import (
 from app.services.profile_service import (
     ProfileService,
 )
+
 
 router = APIRouter(
     prefix="/api/v1",
@@ -25,26 +30,41 @@ async def get_profile(
 ):
 
     try:
-        return await profile_service.get_profile(
-            str(request.profile_url)
+        return (
+            await profile_service.get_profile(
+                str(request.profile_url)
+            )
         )
 
     except ValueError as error:
+
         raise HTTPException(
-            status_code=400,
+            status_code=(
+                status.HTTP_400_BAD_REQUEST
+            ),
             detail=str(error),
-        )
+        ) from error
 
     except RuntimeError as error:
-        raise HTTPException(
-            status_code=503,
-            detail=str(error),
-        )
 
-    except Exception:
         raise HTTPException(
-            status_code=500,
-            detail=(
-                "Unable to retrieve profile information"
+            status_code=(
+                status.HTTP_503_SERVICE_UNAVAILABLE
             ),
-        )
+            detail=(
+                "Profile service "
+                "temporarily unavailable"
+            ),
+        ) from error
+
+    except Exception as error:
+
+        raise HTTPException(
+            status_code=(
+                status.HTTP_500_INTERNAL_SERVER_ERROR
+            ),
+            detail=(
+                "Unable to retrieve "
+                "profile information"
+            ),
+        ) from error
