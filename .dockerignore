@@ -1,0 +1,17 @@
+.git
+.gitignore
+
+.env
+.env.*
+
+README.md
+
+backend/.venv
+backend/__pycache__
+frontend/node_modules
+frontend/dist
+
+.vscode
+.idea
+
+*.log
