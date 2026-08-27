@@ -1,4 +1,4 @@
-# Tross-Assignment---LinkedIn-Profile-API
+# Tross-Assignment-LinkedIn-Profile-API
 
 # LinkedIn Profile API
 
