@@ -2,41 +2,186 @@ import { useState } from "react";
 
 import { fetchProfile } from "./api";
 
+
+function ExperienceList({ items }) {
+
+  if (!items?.length) {
+    return null;
+  }
+
+  return (
+    <section>
+
+      <h3>Experience</h3>
+
+      {items.map(
+        (item, index) => (
+          <article
+            className="item"
+            key={`${item.company}-${index}`}
+          >
+
+            <strong>
+              {item.title || "Position"}
+            </strong>
+
+            {item.company && (
+              <p>
+                {item.company}
+              </p>
+            )}
+
+            <small>
+
+              {item.start_date || ""}
+
+              {item.start_date &&
+                item.end_date &&
+                " - "}
+
+              {item.end_date || (
+                item.start_date
+                  ? "Present"
+                  : ""
+              )}
+
+            </small>
+
+            {item.description && (
+              <p>
+                {item.description}
+              </p>
+            )}
+
+          </article>
+        )
+      )}
+
+    </section>
+  );
+}
+
+
+function EducationList({ items }) {
+
+  if (!items?.length) {
+    return null;
+  }
+
+  return (
+    <section>
+
+      <h3>Education</h3>
+
+      {items.map(
+        (item, index) => (
+          <article
+            className="item"
+            key={`${item.school}-${index}`}
+          >
+
+            <strong>
+              {item.school || "Institution"}
+            </strong>
+
+            {item.degree && (
+              <p>
+                {item.degree}
+              </p>
+            )}
+
+            {item.field_of_study && (
+              <small>
+                {item.field_of_study}
+              </small>
+            )}
+
+          </article>
+        )
+      )}
+
+    </section>
+  );
+}
+
+
+function Skills({ skills }) {
+
+  if (!skills?.length) {
+    return null;
+  }
+
+  return (
+    <section>
+
+      <h3>Skills</h3>
+
+      <div className="skills">
+
+        {skills.map(
+          (skill) => (
+            <span
+              key={skill}
+              className="skill"
+            >
+              {skill}
+            </span>
+          )
+        )}
+
+      </div>
+
+    </section>
+  );
+}
+
+
 function App() {
 
-  const [profileUrl, setProfileUrl] =
-    useState("");
+  const [
+    profileUrl,
+    setProfileUrl
+  ] = useState("");
 
-  const [profile, setProfile] =
-    useState(null);
+  const [
+    profile,
+    setProfile
+  ] = useState(null);
 
-  const [loading, setLoading] =
-    useState(false);
+  const [
+    loading,
+    setLoading
+  ] = useState(false);
 
-  const [error, setError] =
-    useState(null);
+  const [
+    error,
+    setError
+  ] = useState("");
 
 
   async function handleSubmit(event) {
 
     event.preventDefault();
 
-    setLoading(true);
-    setError(null);
+    setError("");
     setProfile(null);
+    setLoading(true);
 
     try {
 
       const result =
-        await fetchProfile(profileUrl);
+        await fetchProfile(
+          profileUrl.trim()
+        );
 
       setProfile(result);
 
     } catch (err) {
 
       setError(
-        err.message ||
-        "Something went wrong"
+        err instanceof Error
+          ? err.message
+          : "Something went wrong"
       );
 
     } finally {
@@ -48,30 +193,39 @@ function App() {
 
 
   return (
+
     <main className="container">
 
-      <header>
+      <header className="hero">
+
         <h1>
           LinkedIn Profile API
         </h1>
 
         <p>
-          Enter a profile URL to retrieve
-          structured information.
+          Retrieve structured profile data
+          through the configured backend
+          provider.
         </p>
+
       </header>
 
 
-      <form onSubmit={handleSubmit}>
+      <form
+        className="profile-form"
+        onSubmit={handleSubmit}
+      >
 
         <label htmlFor="profile-url">
-          Profile URL
+          LinkedIn Profile URL
         </label>
 
         <input
           id="profile-url"
           type="url"
-          placeholder="https://www.linkedin.com/in/..."
+          placeholder={
+            "https://www.linkedin.com/in/..."
+          }
           value={profileUrl}
           onChange={(event) =>
             setProfileUrl(
@@ -85,160 +239,207 @@ function App() {
           type="submit"
           disabled={loading}
         >
+
           {loading
             ? "Loading..."
             : "Fetch Profile"}
+
         </button>
 
       </form>
 
 
       {error && (
-        <div className="error">
+
+        <div
+          className="error"
+          role="alert"
+        >
           {error}
         </div>
+
       )}
 
 
       {profile && (
+
         <section className="profile">
 
           <div className="profile-header">
 
-            {profile.profile_image && (
+            {profile.profile_image ? (
+
               <img
-                src={profile.profile_image}
-                alt={profile.name}
                 className="avatar"
+                src={profile.profile_image}
+                alt={
+                  profile.name ||
+                  "Profile"
+                }
               />
+
+            ) : (
+
+              <div className="avatar placeholder">
+                {(
+                  profile.name ||
+                  "?"
+                )
+                  .charAt(0)
+                  .toUpperCase()}
+              </div>
+
             )}
 
+
             <div>
+
               <h2>
                 {profile.name ||
-                  "Unknown"}
+                  "Unknown Profile"}
               </h2>
 
-              <p>
-                {profile.headline}
-              </p>
+              {profile.headline && (
+                <p>
+                  {profile.headline}
+                </p>
+              )}
 
-              <small>
-                {profile.location}
-              </small>
+              {profile.location && (
+                <small>
+                  {profile.location}
+                </small>
+              )}
+
             </div>
 
           </div>
 
 
           {profile.about && (
+
             <section>
+
               <h3>About</h3>
-              <p>{profile.about}</p>
+
+              <p>
+                {profile.about}
+              </p>
+
             </section>
+
           )}
 
 
-          {profile.experience.length > 0 && (
+          <ExperienceList
+            items={profile.experience}
+          />
+
+
+          <EducationList
+            items={profile.education}
+          />
+
+
+          <Skills
+            skills={profile.skills}
+          />
+
+
+          {profile.certifications?.length > 0 && (
+
             <section>
 
-              <h3>Experience</h3>
+              <h3>
+                Certifications
+              </h3>
 
-              {profile.experience.map(
+              {profile.certifications.map(
                 (item, index) => (
 
-                  <article key={index}>
+                  <article
+                    className="item"
+                    key={`${item.name}-${index}`}
+                  >
 
                     <strong>
-                      {item.title}
+                      {item.name}
                     </strong>
 
-                    <p>
-                      {item.company}
-                    </p>
-
-                    <small>
-                      {item.start_date}
-                      {" - "}
-                      {item.end_date ||
-                        "Present"}
-                    </small>
+                    {item.organization && (
+                      <p>
+                        {item.organization}
+                      </p>
+                    )}
 
                   </article>
+
                 )
               )}
 
             </section>
+
           )}
 
 
-          {profile.education.length > 0 && (
+          {profile.languages?.length > 0 && (
+
             <section>
 
-              <h3>Education</h3>
+              <h3>Languages</h3>
 
-              {profile.education.map(
-                (item, index) => (
+              <ul>
 
-                  <article key={index}>
+                {profile.languages.map(
+                  (language) => (
 
-                    <strong>
-                      {item.school}
-                    </strong>
+                    <li
+                      key={language.name}
+                    >
 
-                    <p>
-                      {item.degree}
-                    </p>
+                      {language.name}
 
-                  </article>
-                )
-              )}
+                      {language.proficiency &&
+                        ` — ${language.proficiency}`}
 
-            </section>
-          )}
+                    </li>
 
-
-          {profile.skills.length > 0 && (
-            <section>
-
-              <h3>Skills</h3>
-
-              <div className="skills">
-
-                {profile.skills.map(
-                  (skill) => (
-                    <span key={skill}>
-                      {skill}
-                    </span>
                   )
                 )}
 
-              </div>
+              </ul>
 
             </section>
+
           )}
 
 
-          <section className="metadata">
+          <footer className="metadata">
 
-            <small>
-              Status: {profile.metadata.status}
-            </small>
+            <span>
+              Status:
+              {" "}
+              {profile.metadata.status}
+            </span>
 
-            <small>
-              Cached:{" "}
+            <span>
+              Cached:
+              {" "}
               {profile.metadata.cached
                 ? "Yes"
                 : "No"}
-            </small>
+            </span>
 
-          </section>
+          </footer>
 
         </section>
+
       )}
 
     </main>
+
   );
 }
+
 
 export default App;
