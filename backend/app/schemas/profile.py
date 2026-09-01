@@ -4,7 +4,15 @@ from pydantic import BaseModel, Field, HttpUrl
 
 
 class ProfileRequest(BaseModel):
-    profile_url: HttpUrl
+    profile_url: HttpUrl = Field(
+        description=(
+            "Public LinkedIn profile URL in the "
+            "form https://www.linkedin.com/in/<slug>"
+        ),
+        examples=[
+            "https://www.linkedin.com/in/williamhgates"
+        ],
+    )
 
 
 class Experience(BaseModel):
@@ -45,9 +53,11 @@ class ProfileMetadata(BaseModel):
 
 
 class ProfileResponse(BaseModel):
-    profile_url: str
+    profile_url: str | None = None
 
+    member_id: str | None = None
     name: str | None = None
+    email: str | None = None
     headline: str | None = None
     location: str | None = None
     about: str | None = None
@@ -64,3 +74,17 @@ class ProfileResponse(BaseModel):
     languages: list[Language] = Field(default_factory=list)
 
     metadata: ProfileMetadata
+
+
+class CacheListResponse(BaseModel):
+    count: int
+    profiles: list[ProfileResponse] = Field(
+        default_factory=list
+    )
+
+
+class SessionStatusResponse(BaseModel):
+    authenticated: bool
+    oauth_configured: bool
+    token_valid: bool = False
+    name: str | None = None

@@ -195,6 +195,43 @@ button:disabled {
   color: #1d4ed8;
 }
 
+.auth {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.linkedin-button {
+  display: inline-block;
+  padding: 12px 18px;
+  border-radius: 8px;
+  background: #0a66c2;
+  color: #ffffff;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.json-preview {
+  margin-top: 24px;
+}
+
+.json-preview summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.json-preview pre {
+  overflow: auto;
+  margin-top: 12px;
+  padding: 16px;
+  border-radius: 8px;
+  background: #111827;
+  color: #e5e7eb;
+  font-size: 13px;
+}
+
 .metadata {
   display: flex;
   gap: 20px;

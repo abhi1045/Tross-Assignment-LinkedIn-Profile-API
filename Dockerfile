@@ -1,7 +1,6 @@
 # ============================================
-# Stage 1: Build React frontend using Bun
+# Stage 1: Build React frontend using Bun (Native arm64)
 # ============================================
-
 FROM oven/bun:1 AS frontend-builder
 
 WORKDIR /frontend
@@ -9,7 +8,8 @@ WORKDIR /frontend
 COPY frontend/package.json ./
 COPY frontend/bun.lock* ./
 
-RUN bun install --frozen-lockfile
+RUN --mount=type=cache,target=/root/.bun/install/cache \
+    bun install --frozen-lockfile
 
 COPY frontend/ .
 
@@ -19,10 +19,12 @@ RUN bun run build
 # ============================================
 # Stage 2: Build Python environment using uv
 # ============================================
-
-FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS backend-builder
+FROM python:3.12-slim-bookworm AS backend-builder
 
 WORKDIR /app
+
+# Installs native arm64 uv binary directly from PyPI (no apt/ghcr needed)
+RUN pip install --no-cache-dir uv
 
 ENV UV_COMPILE_BYTECODE=1
 ENV UV_LINK_MODE=copy
@@ -30,7 +32,8 @@ ENV UV_LINK_MODE=copy
 COPY backend/pyproject.toml ./
 COPY backend/uv.lock ./
 
-RUN uv sync \
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync \
     --frozen \
     --no-dev \
     --no-install-project
@@ -39,8 +42,7 @@ RUN uv sync \
 # ============================================
 # Stage 3: Production runtime
 # ============================================
-
-FROM python:3.12-slim
+FROM python:3.12-slim-bookworm
 
 WORKDIR /app
 
@@ -60,13 +62,4 @@ COPY --from=frontend-builder \
 
 EXPOSE 8000
 
-CMD [
-    "uvicorn",
-    "app.main:app",
-    "--host",
-    "0.0.0.0",
-    "--port",
-    "8000",
-    "--workers",
-    "1"
-]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]

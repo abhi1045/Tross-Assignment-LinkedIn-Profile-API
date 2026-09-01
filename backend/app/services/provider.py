@@ -135,7 +135,19 @@ class AuthorizedHttpProfileProvider(
 
 def get_profile_provider() -> ProfileProvider:
 
+    if settings.use_demo_provider:
+        return DemoProfileProvider()
+
+    if settings.linkedin_session_configured:
+        from app.services.linkedin_voyager import (
+            LinkedInVoyagerProvider,
+        )
+
+        return LinkedInVoyagerProvider()
+
     if settings.provider_base_url:
         return AuthorizedHttpProfileProvider()
 
-    return DemoProfileProvider()
+    raise RuntimeError(
+        "Profile provider is not configured"
+    )
