@@ -31,6 +31,35 @@ The challenge requires a publicly deployed HTTPS API that accepts a LinkedIn pro
 
 ---
 
+# Approach
+
+The public contract is `POST /api/v1/profile` (and `GET /api/v1/profile?profile_url=...`) with a LinkedIn `/in/{slug}` URL.
+
+This is **not** browser automation. There is no Playwright, Selenium, or Chromium. The backend sends authenticated HTTPS requests to LinkedIn's own member **Voyager** REST endpoints — the same APIs the LinkedIn website uses after login.
+
+Authentication is a session cookie (`li_at`) from an account you control, plus `JSESSIONID` used as the CSRF token. Those values are supplied via environment variables. Email and password are never submitted by this server; you log in once in a normal browser, copy the cookie, and this service only replays HTTP.
+
+Primary endpoint (host is fixed, never taken from user input):
+
+```text
+GET https://www.linkedin.com/voyager/api/identity/profiles/{vanity}/profileView
+```
+
+When `profileView` omits a section, the same client optionally requests `/skills`, `/positionView`, and `/educationView`. Nested JSON and Rest.li `included` (normalized) payloads are both mapped into one schema.
+
+The submitted URL is validated (HTTPS, `*.linkedin.com`, `/in/{slug}`). Only the vanity slug is interpolated into a allowlisted path pattern. Image URLs are accepted only from `*.licdn.com` over HTTPS.
+
+Official LinkedIn OAuth (`openid profile email`) cannot look up another member by URL; it only returns the signed-in member. OAuth remains optional for `/api/v1/me`. URL lookups use Voyager.
+
+**Limitations**
+
+* LinkedIn's User Agreement restricts automated access. A session cookie can get the account restricted. This is a challenge / demo implementation, not a production data product.
+* Voyager payloads and decoration change without notice; field coverage is best-effort.
+* Session cookies expire; lookups return 503 until you refresh `LINKEDIN_LI_AT`.
+* Member privacy settings can hide fields even with a valid session.
+
+---
+
 # Features
 
 ## Current Features
@@ -211,6 +240,7 @@ GET /health
 
 ```http
 POST /api/v1/profile
+GET  /api/v1/profile?profile_url=https://www.linkedin.com/in/example-profile/
 ```
 
 ## Request Headers
@@ -331,9 +361,18 @@ For development or authorized access, credentials must be supplied through envir
 Example:
 
 ```env
-LINKEDIN_EMAIL=your_email@example.com
-LINKEDIN_PASSWORD=your_password
+LINKEDIN_LI_AT=
+LINKEDIN_JSESSIONID=
 ```
+
+How to obtain `LINKEDIN_LI_AT` (do this on your own machine, never share the value):
+
+1. Log into LinkedIn in a normal browser with the account the assignment allows you to use.
+2. Open DevTools → Application (Chrome) or Storage (Firefox) → Cookies → `https://www.linkedin.com`.
+3. Copy the `li_at` cookie value into `.env`. Optionally copy `JSESSIONID` as well.
+4. Restart the API process. Cookies expire; refresh them when lookups start returning 503.
+
+Do not automate LinkedIn's login form with email and password from this server. That path is blocked by checkpoints and is not implemented.
 
 ## Important Security Rules
 
@@ -369,8 +408,8 @@ The `.env.example` file must contain placeholder values only.
 Example:
 
 ```env
-LINKEDIN_EMAIL=
-LINKEDIN_PASSWORD=
+LINKEDIN_LI_AT=
+LINKEDIN_JSESSIONID=
 ```
 
 ## Production Secret Management
@@ -386,15 +425,14 @@ Deployment Platform
         ▼
 Docker Container
         │
-        ├── LINKEDIN_EMAIL
-        └── LINKEDIN_PASSWORD
+        ├── LINKEDIN_LI_AT
+        └── LINKEDIN_JSESSIONID
 ```
 
 Never do this:
 
 ```dockerfile
-ENV LINKEDIN_EMAIL=my-real-email@example.com
-ENV LINKEDIN_PASSWORD=my-real-password
+ENV LINKEDIN_LI_AT=do-not-put-secrets-in-dockerfiles
 ```
 
 Also never place credentials directly in:
@@ -584,8 +622,8 @@ REQUEST_TIMEOUT_SECONDS=15
 
 ALLOWED_ORIGINS=http://localhost:5173
 
-LINKEDIN_EMAIL=
-LINKEDIN_PASSWORD=
+LINKEDIN_LI_AT=
+LINKEDIN_JSESSIONID=
 
 PROVIDER_BASE_URL=
 PROVIDER_API_KEY=
@@ -913,7 +951,7 @@ Rate limiting is recommended to protect:
 Possible limits:
 
 ```text
-10 requests/minute per IP
+10 unique profile URLs per minute per IP
 100 requests/hour per IP
 ```
 
@@ -1262,8 +1300,8 @@ Health Endpoint:          Implemented
 Response Schema:          Implemented
 Caching:                  Implemented
 Provider Abstraction:     Implemented
-Authorized Data Provider: To Be Configured
-Rate Limiting:            Planned
+Authorized Data Provider: Voyager HTTP (li_at)
+Rate Limiting:            Implemented
 Distributed Cache:        Planned
 Horizontal Scaling:       Future
 Monitoring:               Future

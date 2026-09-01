@@ -1,6 +1,33 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
-import { fetchProfile } from "./api";
+import {
+  LINKEDIN_LOGIN_URL,
+  fetchMyProfile,
+  fetchProfile,
+  fetchSession,
+  logout
+} from "./api";
+
+
+function isSafeImageUrl(url) {
+
+  if (!url || typeof url !== "string") {
+    return false;
+  }
+
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.toLowerCase();
+
+    return (
+      parsed.protocol === "https:" &&
+      (host === "licdn.com" ||
+        host.endsWith(".licdn.com"))
+    );
+  } catch {
+    return false;
+  }
+}
 
 
 function ExperienceList({ items }) {
@@ -158,6 +185,99 @@ function App() {
     setError
   ] = useState("");
 
+  const [
+    session,
+    setSession
+  ] = useState({
+    authenticated: false,
+    oauth_configured: false
+  });
+
+
+  const loadSession = useCallback(
+    async () => {
+
+      try {
+        setSession(await fetchSession());
+      } catch {
+        setSession({
+          authenticated: false,
+          oauth_configured: false
+        });
+      }
+    },
+    []
+  );
+
+
+  useEffect(
+    () => {
+      loadSession();
+    },
+    [loadSession]
+  );
+
+
+  const loadMyProfile = useCallback(
+    async () => {
+
+      setError("");
+      setProfile(null);
+      setLoading(true);
+
+      try {
+        setProfile(await fetchMyProfile());
+      } catch (err) {
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Something went wrong"
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
+
+
+  useEffect(
+    () => {
+
+      const params =
+        new URLSearchParams(
+          window.location.search
+        );
+
+      if (params.get("auth") === "failed") {
+        setError(
+          "LinkedIn sign-in did not complete"
+        );
+      }
+
+      if (params.get("auth") === "success") {
+        loadMyProfile();
+      }
+    },
+    [loadMyProfile]
+  );
+
+
+  async function handleSignOut() {
+
+    try {
+      await logout();
+    } catch {
+      // Cookie is cleared server-side even
+      // if the response is unavailable.
+    }
+
+    setProfile(null);
+    setError("");
+
+    await loadSession();
+  }
+
 
   async function handleSubmit(event) {
 
@@ -203,12 +323,62 @@ function App() {
         </h1>
 
         <p>
-          Retrieve structured profile data
-          through the configured backend
-          provider.
+          Submit a public LinkedIn profile URL.
+          The backend calls LinkedIn Voyager
+          endpoints over HTTPS — no browser
+          automation.
         </p>
 
       </header>
+
+
+      <section className="auth">
+
+        {session.authenticated ? (
+
+          <>
+            <p>
+              Signed in
+              {session.name
+                ? ` as ${session.name}`
+                : ""}
+            </p>
+
+            <button
+              type="button"
+              onClick={loadMyProfile}
+              disabled={loading}
+            >
+              View My Profile
+            </button>
+
+            <button
+              type="button"
+              onClick={handleSignOut}
+            >
+              Sign Out
+            </button>
+          </>
+
+        ) : session.oauth_configured ? (
+
+          <a
+            className="linkedin-button"
+            href={LINKEDIN_LOGIN_URL}
+          >
+            Sign in with LinkedIn
+          </a>
+
+        ) : (
+
+          <p>
+            LinkedIn sign-in is not
+            configured on the server.
+          </p>
+
+        )}
+
+      </section>
 
 
       <form
@@ -267,7 +437,7 @@ function App() {
 
           <div className="profile-header">
 
-            {profile.profile_image ? (
+            {isSafeImageUrl(profile.profile_image) ? (
 
               <img
                 className="avatar"
@@ -431,6 +601,15 @@ function App() {
             </span>
 
           </footer>
+
+          <details className="json-preview">
+            <summary>
+              Raw JSON
+            </summary>
+            <pre>
+              {JSON.stringify(profile, null, 2)}
+            </pre>
+          </details>
 
         </section>
 

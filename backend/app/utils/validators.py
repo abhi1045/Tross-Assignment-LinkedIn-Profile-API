@@ -1,4 +1,24 @@
+import re
 from urllib.parse import urlparse
+
+# LinkedIn vanity slugs are ASCII. Restricting
+# the identifier prevents path injection into
+# the fixed Voyager URL.
+_VANITY_PATTERN = re.compile(
+    r"^[A-Za-z0-9](?:[A-Za-z0-9._-]{0,98}[A-Za-z0-9])?$"
+)
+
+
+def _is_linkedin_hostname(hostname: str | None) -> bool:
+
+    if not hostname:
+        return False
+
+    host = hostname.lower().rstrip(".")
+
+    return host == "linkedin.com" or host.endswith(
+        ".linkedin.com"
+    )
 
 
 def validate_linkedin_profile_url(
@@ -12,12 +32,7 @@ def validate_linkedin_profile_url(
             "Profile URL must use HTTPS"
         )
 
-    hostname = parsed.hostname
-
-    if hostname not in {
-        "linkedin.com",
-        "www.linkedin.com",
-    }:
+    if not _is_linkedin_hostname(parsed.hostname):
         raise ValueError(
             "Please provide a valid LinkedIn URL"
         )
@@ -29,6 +44,16 @@ def validate_linkedin_profile_url(
             "Please provide a LinkedIn profile URL"
         )
 
+    extract_profile_identifier(profile_url)
+
+    return profile_url.rstrip("/")
+
+
+def extract_profile_identifier(
+    profile_url: str,
+) -> str:
+
+    path = urlparse(profile_url).path.rstrip("/")
     parts = [
         part
         for part in path.split("/")
@@ -40,4 +65,11 @@ def validate_linkedin_profile_url(
             "LinkedIn profile identifier is missing"
         )
 
-    return profile_url.rstrip("/")
+    vanity = parts[1]
+
+    if not _VANITY_PATTERN.fullmatch(vanity):
+        raise ValueError(
+            "LinkedIn profile identifier is invalid"
+        )
+
+    return vanity

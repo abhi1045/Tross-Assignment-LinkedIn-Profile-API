@@ -222,6 +222,10 @@ __marimo__/
 # Environment
 .env
 
+# Persisted OAuth tokens
+.secrets/
+backend/.secrets/
+
 # Python
 __pycache__/
 *.py[cod]
